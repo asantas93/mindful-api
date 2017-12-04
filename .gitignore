@@ -1,0 +1,12 @@
+logs
+target
+/.idea
+/.idea_modules
+/.classpath
+/.project
+/.settings
+/RUNNING_PID
+.location_id
+.square_access_token
+.service_key.json
+KeyStore.jks
