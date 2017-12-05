@@ -65,7 +65,7 @@ class OrderController @Inject()(cc: ControllerComponents, square: Square, email:
           order.itemName,
           order.variationName,
           order.unitPrice,
-          0,
+          order.tip.getOrElse(0),
           "CC",
           "",
           "",
@@ -79,7 +79,8 @@ class OrderController @Inject()(cc: ControllerComponents, square: Square, email:
 }
 
 case class Order(private val itemId: String, private val variationId: String, quantity: Int, from: String,
-                 toName: String, toEmail: String, giftMessage: Option[String], private val couples: Boolean
+                 toName: String, toEmail: String, giftMessage: Option[String], private val couples: Boolean,
+                 tip: Option[Int]
                 )(implicit inventory: List[PublicItem]) {
 
   validate()
@@ -90,11 +91,13 @@ case class Order(private val itemId: String, private val variationId: String, qu
   private val item: PublicItem = inventory.find { _.id == itemId }.get
   private val variation: PublicVariation = item.variations.find { _.id == variationId }.get
   private val squarePrice: Int = variation.price + { if (couples) 1000 + variation.price else 0 }
-  val squareTotal: Int = squarePrice * quantity
+  private val squareTip = tip.getOrElse(0) * 100
+  val squareTotal: Int = (squarePrice + squareTip) * quantity
   val unitPrice: Double = squarePrice / 100.0
   val totalPrice: Double = squareTotal / 100.0
   val itemName: String = item.name + (if (couples) " (couples)" else "")
   val variationName: String = variation.name
+  val leftTip: Boolean = tip.exists(_ > 0)
 
   def validate(): Unit = {
     require(toEmail.split("@")(1).contains("."),
@@ -103,6 +106,7 @@ case class Order(private val itemId: String, private val variationId: String, qu
     require(item.isDefined, s"Bad itemId specified for order $this")
     require(item.get.variations.exists { _.id == variationId }, s"Bad variationId specified for order $this")
     require(quantity >= 0, s"Illegal quantity $quantity specified for order $this")
+    tip.foreach(amount => require(amount >= 0, s"Tip cannot be negative: $amount"))
   }
 
 }

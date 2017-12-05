@@ -47,7 +47,7 @@ class Email {
          |    <link href="https://fonts.googleapis.com/css?family=Work+Sans" rel="stylesheet">
          |  </head>
          |  <body>
-         |    <h3>$to, you've received a gift from $from:</h3>
+         |    <h3>$to, you've received a gift from $from${if(order.leftTip) " with a tip left on your behalf" else ""}:</h3>
          |    <p style="font-size: 14px; font-style: italic">$message</p>
          |    <br>
          |    <img style="display: block;" src="https://mindfulmassage.biz/img/gcheader.png">
@@ -81,7 +81,7 @@ class Email {
     def prettyPrice(price: Double): String = NumberFormat.getCurrencyInstance(Locale.US).format(price)
     val items = orders.map {
       order => s"${order.quantity}x ${order.variationName} ${order.itemName} @ ${
-        prettyPrice(order.unitPrice)
+        prettyPrice(order.unitPrice) + order.tip.map { "+ " + prettyPrice(_) + " tip" }.getOrElse("")
       } each"
     }.mkString("<br>")
     val total = prettyPrice(orders.map { order => order.totalPrice }.sum)
