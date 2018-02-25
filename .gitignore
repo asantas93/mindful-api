@@ -9,4 +9,5 @@ target
 .location_id
 .square_access_token
 .service_key.json
+.dropbox_token
 KeyStore.jks

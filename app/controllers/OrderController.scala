@@ -4,7 +4,6 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import javax.inject.Inject
 
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
 import org.apache.commons.text.RandomStringGenerator
 import play.api.mvc.{AbstractController, ControllerComponents}
 import play.api.libs.json.{Json, Reads}
@@ -14,7 +13,7 @@ import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 @Inject
-class OrderController @Inject()(cc: ControllerComponents, square: Square, email: Email, sheets: GoogleSheets)
+class OrderController @Inject()(cc: ControllerComponents, square: Square, email: Email, dropbox: Dropbox, excel: Excel)
   extends AbstractController(cc) {
 
   def order = Action {
@@ -53,24 +52,24 @@ class OrderController @Inject()(cc: ControllerComponents, square: Square, email:
   }
 
   def logGiftCards(orders: List[Order])(implicit inventory: List[PublicItem]): Unit = {
-    implicit val credential: GoogleCredential = sheets.credential
+    val year = new SimpleDateFormat("yyyy").format(Calendar.getInstance().getTime)
+    val logPath = s"/MM/Financial Records/FY$year/Gift Certificate Log $year.xlsx"
     orders.foreach {
       order => order.codes.foreach {
-        code => sheets.append(
-          code,
-          new SimpleDateFormat("MM/dd/yyyy").format(Calendar.getInstance().getTime),
-          order.toName,
-          order.from,
-          "Unspecified",
-          order.itemName,
-          order.variationName,
-          order.unitPrice,
-          order.tip.getOrElse(0),
-          "CC",
-          "",
-          "",
-          "",
-          "Web purchase"
+        code => dropbox.upload(
+          logPath,
+          excel.appendToLog(dropbox.download(logPath))(
+            Calendar.getInstance().getTime,
+            order.toName,
+            order.from,
+            "No Preference",
+            order.itemName,
+            order.variationName,
+            order.unitPrice,
+            order.tip.getOrElse(0).doubleValue(),
+            "CC",
+            code,
+          )
         )
       }
     }
