@@ -1,5 +1,14 @@
-name := """mm-api"""
+import scala.io.Source
 
+def slurpFile(path: String) = Source.fromFile(path).mkString.trim
+val envOrFile = List(
+  "SQUARE_DEV_ACCESS_TOKEN",
+  "SQUARE_ACCESS_TOKEN",
+  "SQUARE_DEV_LOCATION_ID",
+  "SQUARE_LOCATION_ID"
+)
+
+name := """mm-api"""
 version := "1.0-SNAPSHOT"
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
@@ -12,6 +21,7 @@ scalaVersion := "2.12.2"
 libraryDependencies ++= Seq(
   guice,
   "org.scalatestplus.play" %% "scalatestplus-play" % "3.0.0" % Test,
+  "org.scalatest" %% "scalatest" % "3.0.4" % Test,
   "com.h2database" % "h2" % "1.4.194",
   "org.scalaj" %% "scalaj-http" % "2.3.0",
   "org.json4s" %% "json4s-jackson" % "3.5.0",
@@ -21,10 +31,15 @@ libraryDependencies ++= Seq(
   "com.google.apis" % "google-api-services-oauth2" % "v2-rev83-1.19.1",
   "com.google.apis" % "google-api-services-sheets" % "v4-rev484-1.22.0",
   "com.dropbox.core" % "dropbox-core-sdk" % "3.0.6",
+  "com.squareup" % "connect" % "2.5.3",
   "org.apache.poi" % "poi-ooxml" % "3.17",
   "org.apache.poi" % "poi" % "3.17"
 )
-
+envVars in Test := envOrFile.map {
+  varName => varName -> sys.env.getOrElse(varName, slurpFile(s".${varName.toLowerCase}"))
+}.toMap ++ Map(
+  "SQUARE_DEV_MODE" -> "true"
+)
 
 javaOptions += "-Dhttps.port=9443"
 javaOptions += "-Dhttp.port=disabled"

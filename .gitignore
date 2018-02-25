@@ -6,8 +6,8 @@ target
 /.project
 /.settings
 /RUNNING_PID
-.location_id
-.square_access_token
+.square_*
 .service_key.json
 .dropbox_token
+api.mindfulmassage.biz.csr
 KeyStore.jks

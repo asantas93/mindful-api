@@ -9,7 +9,7 @@ import play.api.libs.json.{Json, OWrites}
 import scala.language.{implicitConversions, postfixOps}
 import scalaj.http.Http
 
-class Square {
+class OldSquare {
 
   private implicit val formats: DefaultFormats = DefaultFormats
   private implicit val priceWrites: OWrites[Price] = Json.writes[Price]
@@ -47,7 +47,7 @@ class Square {
   }
 
   def order(): String = {
-    // TODO: Come up with way to handle couples massages and swtich to order + charge
+    // TODO: Come up with way to handle couples massages and switch to order + charge
     squarePost(
       s"v2/locations/${if (devMode) devLocationId else locationId}/orders",
       Json.toJson {
@@ -90,7 +90,8 @@ class Square {
           )
         },
         item.item_data.description,
-        sellableCategories map { _.swap } apply item.item_data.category_id.get
+        sellableCategories map { _.swap } apply item.item_data.category_id.get,
+        Nil
       )
     }
   }
@@ -112,7 +113,3 @@ class Square {
   private case class LineItem(catalog_object_id: String, quantity: String)
 
 }
-
-case class PublicItem(id: String, name: String, variations: List[PublicVariation],
-                      description: Option[String], category: String)
-case class PublicVariation(id: String, name: String, price: Int)
