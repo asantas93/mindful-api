@@ -83,7 +83,7 @@ class OrderController @Inject()(
             }",
             orderLineItem.getVariationName,
             orderLineItem.getBasePriceMoney.decimal +
-              orderLineItem.getModifiers.asScala.map(_.getTotalPriceMoney.decimal).sum,
+              orderLineItem.getModifiers.asScala.map(_.getBasePriceMoney.decimal).sum,
             order.tip.getOrElse(0),
             "CC",
             code,
