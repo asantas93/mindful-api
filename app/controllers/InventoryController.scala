@@ -7,7 +7,7 @@ import play.api.libs.json.{Json, OWrites}
 import services._
 
 @Inject
-class InventoryController @Inject() (cc: ControllerComponents, square: OldSquare) extends AbstractController(cc) {
+class InventoryController @Inject() (cc: ControllerComponents, squareCatalog: SquareCatalog) extends AbstractController(cc) {
 
   private implicit val variationWrites: OWrites[PublicVariation] = Json.writes[PublicVariation]
   private implicit val modifierWrites: OWrites[PublicModifier] = Json.writes[PublicModifier]
@@ -15,7 +15,7 @@ class InventoryController @Inject() (cc: ControllerComponents, square: OldSquare
   private implicit val itemWrites: OWrites[PublicItem] = Json.writes[PublicItem]
 
   def inventory = Action {
-    Ok { Json.toJson { square.inventory } }
+    Ok { Json.toJson { squareCatalog.getInventory } }
   }
 
 }

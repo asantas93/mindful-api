@@ -1,16 +1,21 @@
 package services
 
-import java.text.{NumberFormat, SimpleDateFormat}
-import java.util.{Calendar, Locale}
+import java.text.SimpleDateFormat
+import java.util.Calendar
 import javax.mail.internet.InternetAddress
 
-import courier.{Defaults, Envelope, Mailer, Multipart, addr}
-import Defaults._
-import controllers.Order
+import com.squareup.connect.models.Order
+import controllers.PublicOrder
+import courier.Defaults._
+import courier.{Envelope, Mailer, Multipart, addr}
+import implicits.MoneyLike
 
+import scala.collection.JavaConverters._
 import scala.language.{implicitConversions, postfixOps}
 
 class Email {
+
+  val COUPLES_ADDON = "Couples"
 
   def genericEmail(to: String, subject: String, body: String, bcc: InternetAddress*): Unit = {
     Mailer("smtp.gmail.com", 587)
@@ -25,12 +30,16 @@ class Email {
       } onComplete { outcome => if (outcome isFailure) throw new RuntimeException("Failed to send email") }
   }
 
-  def giftEmail(order: Order): Unit = {
+  def renderGift(order: PublicOrder)(implicit squareOrder: Order): String = {
+    val orderItem = order.asSquare
+    val isCouples = orderItem.getModifiers.asScala.exists(_.getName == COUPLES_ADDON)
+    def ifCouples(str: String): String = if (isCouples) str else ""
     val from = order.from
     val message = order.giftMessage.getOrElse("")
-    val quantity = order.quantity.toString
-    val variation = order.variationName
-    val item = order.itemName
+    val quantity = if (isCouples) order.quantity / 2 else order.quantity
+    val variation = order.asSquare.getVariationName
+    val item = ifCouples("Couples ") + orderItem.getName
+    val modifiers = orderItem.getModifiers.asScala.filterNot(_.getName == COUPLES_ADDON).mkString(", ")
     val to = order.toName
     val expiration = {
       val calendar = Calendar.getInstance()
@@ -38,16 +47,13 @@ class Email {
       new SimpleDateFormat("MM/dd/yyyy").format(calendar.getTime)
     }
     val codes = order.codes.mkString(", ")
-    genericEmail(
-      order.toEmail,
-      "You've received a gift certificate",
-      s"""<!DOCTYPE html>
+    s"""<!DOCTYPE html>
          |<html lang="en">
          |  <head>
          |    <link href="https://fonts.googleapis.com/css?family=Work+Sans" rel="stylesheet">
          |  </head>
          |  <body>
-         |    <h3>$to, you've received a gift from $from${if(order.leftTip) " with a tip left on your behalf" else ""}:</h3>
+         |    <h3>$to, you've received a gift from $from${if(order.tip.exists(_ > 0)) " with a tip left on your behalf" else ""}:</h3>
          |    <p style="font-size: 14px; font-style: italic">$message</p>
          |    <br>
          |    <img style="display: block;" src="https://mindfulmassage.biz/img/gcheader.png">
@@ -63,44 +69,55 @@ class Email {
          |      </div>
          |    </div>
          |    <br>
-         |    x$quantity $variation $item
+         |    x$quantity $variation $item ${if (modifiers.nonEmpty) s"with $modifiers" else ""}
          |    <br>
-         |    Redeem with code(s) $codes
+         |    Redeem with code(s) $codes. ${ifCouples("Couples massages require one code be redeemed per person.")}
          |    <br>
          |    2229 E Park Ave
          |    <br>
          |    Valdosta, GA 31602
          |    <br>
-         |    Visit our <a href="https://mindfulmassage.biz">website</a> to book your appointment
+         |    Visit our <a href="https://mindfulmassage.biz">website</a> or call (229) 259-9535 to book your appointment
+         |    ${ifCouples("<br>If you have received a couples massage, you must call the office to schedule an appointment.")}
          |  </body>
          |</html>""".stripMargin
+  }
+
+  def giftEmail(order: PublicOrder)(implicit squareOrder: Order): Unit = {
+    genericEmail(
+      order.toEmail,
+      "You've received a gift certificate",
+      renderGift(order)
     )
   }
 
-  def receiptEmail(email: String, orders: List[Order]): Unit = {
-    def prettyPrice(price: Double): String = NumberFormat.getCurrencyInstance(Locale.US).format(price)
-    val items = orders.map {
-      order => s"${order.quantity}x ${order.variationName} ${order.itemName} @ ${
-        prettyPrice(order.unitPrice) + order.tip.map { "+ " + prettyPrice(_) + " tip" }.getOrElse("")
-      } each"
+  def renderReceipt(squareOrder: Order): String = {
+    val items = squareOrder.getLineItems.asScala.map {
+      order => s"${order.getQuantity}x ${Option(order.getVariationName).getOrElse("")} ${order.getName} @ ${
+        order.getBasePriceMoney.pretty
+      }<br>${order.getModifiers.asScala.map(m => s"- add ${m.getName} @ ${m.getBasePriceMoney.pretty}").mkString("<br>")}"
     }.mkString("<br>")
-    val total = prettyPrice(orders.map { order => order.totalPrice }.sum)
+    val total = squareOrder.getTotalMoney.pretty
+     s"""<!DOCTYPE html>
+    |<html lang="en">
+    |  <body>
+    |    <h2>Mindful Massage &amp; Bodywork</h2>
+    |    <p>Thank you very much for your order! Below is summary of your purchase:</p>
+    |    <br>
+    |    $items
+    |    <br>
+    |    Total: $total
+    |    <br>
+    |    Please call our office or respond to this email with any questions.
+    |  </body>
+    |</html>""".stripMargin
+  }
+
+  def receiptEmail(email: String, squareOrder: Order): Unit = {
     genericEmail(
       email,
       "Your recent order",
-      s"""<!DOCTYPE html>
-         |<html lang="en">
-         |  <body>
-         |    <h2>Mindful Massage &amp; Bodywork</h2>
-         |    <p>Thank you very much for your order! Below is summary of your purchase:</p>
-         |    <br>
-         |    $items
-         |    <br>
-         |    Total: $total
-         |    <br>
-         |    Please call our office or respond to this email with any questions.
-         |  </body>
-         |</html>""".stripMargin,
+      renderReceipt(squareOrder),
       sys.env("RECEIPT_BCC")
     )
   }
