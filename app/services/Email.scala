@@ -15,8 +15,6 @@ import scala.language.{implicitConversions, postfixOps}
 
 class Email {
 
-  val COUPLES_ADDON = "Couples"
-
   def genericEmail(to: String, subject: String, body: String, bcc: InternetAddress*): Unit = {
     Mailer("smtp.gmail.com", 587)
       .auth(true)
@@ -32,14 +30,12 @@ class Email {
 
   def renderGift(order: PublicOrder)(implicit squareOrder: Order): String = {
     val orderItem = order.asSquare
-    val isCouples = orderItem.getModifiers.asScala.exists(_.getName == COUPLES_ADDON)
-    def ifCouples(str: String): String = if (isCouples) str else ""
     val from = order.from
     val message = order.giftMessage.getOrElse("")
-    val quantity = if (isCouples) order.quantity / 2 else order.quantity
+    val quantity = order.quantity
     val variation = order.asSquare.getVariationName
-    val item = ifCouples("Couples ") + orderItem.getName
-    val modifiers = orderItem.getModifiers.asScala.filterNot(_.getName == COUPLES_ADDON).mkString(", ")
+    val item = orderItem.getName
+    val modifiers = orderItem.getModifiers.asScala.map(_.getName).mkString(", ")
     val to = order.toName
     val expiration = {
       val calendar = Calendar.getInstance()
@@ -71,14 +67,13 @@ class Email {
          |    <br>
          |    x$quantity $variation $item ${if (modifiers.nonEmpty) s"with $modifiers" else ""}
          |    <br>
-         |    Redeem with code(s) $codes. ${ifCouples("Couples massages require one code be redeemed per person.")}
+         |    Redeem with code(s) $codes.
          |    <br>
          |    2229 E Park Ave
          |    <br>
          |    Valdosta, GA 31602
          |    <br>
          |    Visit our <a href="https://mindfulmassage.biz">website</a> or call (229) 259-9535 to book your appointment
-         |    ${ifCouples("<br>If you have received a couples massage, you must call the office to schedule an appointment.")}
          |  </body>
          |</html>""".stripMargin
   }

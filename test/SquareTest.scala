@@ -14,7 +14,7 @@ class SquareTest extends FlatSpec with Matchers {
 
   it should "calculate expected order total" in {
     implicit val inventory: List[PublicItem] = catalogApi.getInventory
-    val item1 = inventory.head
+    val item1 = inventory.find(_.name == "Couples Massage").get
     val item2 = inventory.last
     val variation1 = item1.variations.last
     val variation2 = item2.variations.head

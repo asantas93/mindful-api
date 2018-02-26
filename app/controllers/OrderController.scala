@@ -94,8 +94,6 @@ class OrderController @Inject()(
 
 case class PublicOrder(itemId: String, variationId: String, quantity: Int, from: String, toName: String,
                        toEmail: String, giftMessage: Option[String], modifiers: List[String], tip: Option[Long]) {
-  require(!modifiers.contains("RZRULCMMVYYTRDJEIOJVZVEN") || quantity % 2 == 0,
-    "You cannot purchase an odd number of massages with the Couples addon")
   val codes: List[String] = Range(0, quantity).toList.map {
     _ => new RandomStringGenerator.Builder().withinRange('A', 'Z').build().generate(8)
   }
