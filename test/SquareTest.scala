@@ -20,7 +20,7 @@ class SquareTest extends FlatSpec with Matchers {
     val variation2 = item2.variations.head
     val quantity1 = 2
     val quantity2 = 1
-    val tip1 = 500
+    val tip1 = 5
     val modifier1 = item1.modifiers.head.modifiers.head
     val orderRequest = PublicOrderRequest(
       "fake-card-nonce-ok",
@@ -32,7 +32,7 @@ class SquareTest extends FlatSpec with Matchers {
     )
     implicit val order: Order = ordersApi.createOrder(orderRequest)
     assertResult {
-      quantity1 * (modifier1.price + tip1 + variation1.price) + quantity2 * variation2.price
+      quantity1 * (modifier1.price + tip1 * 100 + variation1.price) + quantity2 * variation2.price
     } {
       order.getTotalMoney.getAmount
     }

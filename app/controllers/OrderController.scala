@@ -68,7 +68,9 @@ class OrderController @Inject()(
     val year = new SimpleDateFormat("yyyy").format(Calendar.getInstance().getTime)
     val logPath = s"/MM/Financial Records/FY$year/Gift Certificate Log $year.xlsx"
     orders.foreach {
-      order => order.codes.foreach {
+      order =>
+        val orderLineItem = order.asSquare
+        order.codes.foreach {
         code => dropbox.upload(
           logPath,
           excel.appendToLog(dropbox.download(logPath))(
@@ -76,12 +78,13 @@ class OrderController @Inject()(
             order.toName,
             order.from,
             "No Preference",
-            s"${order.asSquare.getName} ${
-              wrapModifiers(order.asSquare.getModifiers.asScala.map(_.getName).mkString(", "))
+            s"${orderLineItem.getName} ${
+              wrapModifiers(orderLineItem.getModifiers.asScala.map(_.getName).mkString(", "))
             }",
-            order.asSquare.getVariationName,
-            order.asSquare.getTotalMoney.decimal,
-            order.tip.getOrElse(0L) / 100.0,
+            orderLineItem.getVariationName,
+            orderLineItem.getBasePriceMoney.decimal +
+              orderLineItem.getModifiers.asScala.map(_.getTotalPriceMoney.decimal).sum,
+            order.tip.getOrElse(0),
             "CC",
             code,
           )
@@ -93,7 +96,7 @@ class OrderController @Inject()(
 }
 
 case class PublicOrder(itemId: String, variationId: String, quantity: Int, from: String, toName: String,
-                       toEmail: String, giftMessage: Option[String], modifiers: List[String], tip: Option[Long]) {
+                       toEmail: String, giftMessage: Option[String], modifiers: List[String], tip: Option[Double]) {
   val codes: List[String] = Range(0, quantity).toList.map {
     _ => new RandomStringGenerator.Builder().withinRange('A', 'Z').build().generate(8)
   }
