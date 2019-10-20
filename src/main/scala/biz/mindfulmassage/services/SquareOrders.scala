@@ -1,10 +1,10 @@
-package services
+package biz.mindfulmassage.services
 
 import java.util.UUID.randomUUID
 
 import com.squareup.connect.api.OrdersApi
 import com.squareup.connect.models._
-import controllers.PublicOrderRequest
+import biz.mindfulmassage.lambdas.PublicOrderRequest
 
 import scala.collection.JavaConverters._
 import scala.language.postfixOps

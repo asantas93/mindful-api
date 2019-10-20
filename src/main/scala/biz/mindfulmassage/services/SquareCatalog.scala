@@ -1,4 +1,4 @@
-package services
+package biz.mindfulmassage.services
 
 import com.squareup.connect.api.CatalogApi
 import com.squareup.connect.models.SearchCatalogObjectsRequest

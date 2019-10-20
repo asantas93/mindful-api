@@ -1,4 +1,4 @@
-package services
+package biz.mindfulmassage.services
 
 import java.io.InputStream
 import java.util.Locale

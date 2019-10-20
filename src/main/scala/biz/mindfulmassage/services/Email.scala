@@ -1,14 +1,14 @@
-package services
+package biz.mindfulmassage.services
 
 import java.text.SimpleDateFormat
 import java.util.Calendar
-import javax.mail.internet.InternetAddress
 
+import javax.mail.internet.InternetAddress
 import com.squareup.connect.models.Order
-import controllers.PublicOrder
+import biz.mindfulmassage.lambdas.PublicOrder
+import biz.mindfulmassage.implicits._
 import courier.Defaults._
 import courier.{Envelope, Mailer, Multipart, addr}
-import implicits.MoneyLike
 
 import scala.collection.JavaConverters._
 import scala.language.{implicitConversions, postfixOps}
