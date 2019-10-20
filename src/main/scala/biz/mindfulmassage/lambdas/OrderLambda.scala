@@ -11,10 +11,22 @@ import com.squareup.connect.models.{Order, OrderLineItem}
 import org.apache.commons.text.RandomStringGenerator
 import org.json4s.Extraction._
 import org.json4s.{DefaultFormats, Formats}
+import org.slf4j.LoggerFactory
 import play.api.libs.json.JsString
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
+
+@HttpHandler(path = "/order", method = "options")
+class OrderOptionsLambda extends ApiGatewayHandler {
+
+  override def handle(request: HttpRequest, ctx: SamContext): HttpResponse = {
+    HttpResponse.ok
+      .withHeader("Access-Control-Allow-Origin", "*")
+      .withHeader("Access-Control-Allow-Headers", "*")
+      .withHeader("Access-Control-Allow-Methods", "OPTIONS,POST")
+  }
+}
 
 @HttpHandler(path = "/order", method = "post")
 class OrderLambda extends ApiGatewayHandler {
@@ -26,9 +38,10 @@ class OrderLambda extends ApiGatewayHandler {
   private val dropbox = new Dropbox
   private val excel = new Excel
   private val maintainerEmail = biz.mindfulmassage.conf.getString("email.maintainer-address")
+  private val logger = LoggerFactory.getLogger(getClass)
 
   override def handle(request: HttpRequest, ctx: SamContext): HttpResponse = {
-    Try {
+    val resp = Try {
       extractOpt[PublicOrderRequest](request.body.asJValue).orElse {
         throw new RuntimeException("Your order could not be understood. Please contact our staff for assistance.")
       }.foreach {
@@ -40,7 +53,8 @@ class OrderLambda extends ApiGatewayHandler {
           tryEmailError { request.orders foreach { o => email.giftEmail(o) } }
       }
     } match {
-      case Success(_) => HttpResponse.ok.withBody(JsString("Order processed."))
+      case Success(_) => HttpResponse.ok
+        .withBody(JsString("Order processed."))
       case Failure(e) => HttpResponse.serverError.withBody {
         JsString {
           "Your order resulted in an error and has been cancelled. Please try clearing your browser's cache and " +
@@ -49,24 +63,27 @@ class OrderLambda extends ApiGatewayHandler {
         }
       }
     }
+    resp.withHeader("Access-Control-Allow-Origin", "*")
   }
 
   private def tryEmailError(func: => Unit): Unit = {
     try {
       func
     } catch {
-      case e: Exception => email.genericEmail(
-        maintainerEmail,
-        s"API Error ${Calendar.getInstance().getTime.toString}",
-        s"Encountered error: ${e.toString}\n${e.getMessage}\n${e.getStackTrace.mkString("\n")}",
-      )
+      case e: Exception =>
+        logger.error("Encountered error in order completion.", e)
+        email.genericEmail(
+          maintainerEmail,
+          s"API Error ${Calendar.getInstance().getTime.toString}",
+          s"Encountered error: ${e.toString}\n${e.getMessage}\n${e.getStackTrace.mkString("\n")}",
+        )
     }
   }
 
   def logGiftCards(orders: List[PublicOrder])(implicit squareOrder: Order): Unit = {
     def wrapModifiers(m: String) = if (m.nonEmpty) s"with ($m)" else ""
     val year = new SimpleDateFormat("yyyy").format(Calendar.getInstance().getTime)
-    val logPath = s"/MM/Financial Records/FY$year/Gift Certificate Log $year.xlsx"
+    val logPath = s"/MM/Financial Records/FY$year/Gift Certificate Log - Online $year.xlsx"
     orders.foreach {
       order =>
         val orderLineItem = order.asSquare

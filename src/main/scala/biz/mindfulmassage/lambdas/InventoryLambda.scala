@@ -14,6 +14,8 @@ import org.json4s.{DefaultFormats, Formats}
   private val catalog = new SquareCatalog
 
   override def handle(request: HttpRequest, ctx: SamContext): HttpResponse = {
-    HttpResponse.ok.withBody(decompose(catalog.getInventory).asJsValue)
+    HttpResponse.ok
+      .withHeader("Access-Control-Allow-Origin", "*")
+      .withBody(decompose(catalog.getInventory).asJsValue)
   }
 }

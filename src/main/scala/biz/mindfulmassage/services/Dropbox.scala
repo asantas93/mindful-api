@@ -7,8 +7,6 @@ import com.dropbox.core.DbxRequestConfig
 import com.dropbox.core.v2.DbxClientV2
 import com.dropbox.core.v2.files.{FileMetadata, WriteMode}
 
-import scala.io.Source
-
 class Dropbox {
 
   private val conf = DbxRequestConfig.newBuilder("mm-api")
@@ -17,7 +15,7 @@ class Dropbox {
     .build()
 
   private val client =
-    new DbxClientV2(conf, sys.env.getOrElse("DROPBOX_TOKEN", Source.fromFile(".dropbox_token").mkString.trim))
+    new DbxClientV2(conf, biz.mindfulmassage.conf.getString("dropbox.token"))
 
   def download(path: String): InputStream = {
     client.files.download(path).getInputStream
