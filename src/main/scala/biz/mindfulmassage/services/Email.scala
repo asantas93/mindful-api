@@ -15,12 +15,16 @@ import scala.language.{implicitConversions, postfixOps}
 
 class Email {
 
+  private val storeUser = biz.mindfulmassage.conf.getString("email.store-gmail.user")
+  private val storePass = biz.mindfulmassage.conf.getString("email.store-gmail.password")
+  private val operatorEmail = biz.mindfulmassage.conf.getString("email.operator-address")
+
   def genericEmail(to: String, subject: String, body: String, bcc: InternetAddress*): Unit = {
     Mailer("smtp.gmail.com", 587)
       .auth(true)
-      .as(sys.env("STORE_GMAIL_USER") at "gmail.com" getAddress, sys.env("STORE_GMAIL_PW"))
+      .as(storeUser at "gmail.com" getAddress, storePass)
       .startTtls(true)() {
-        Envelope.from(sys.env("STORE_GMAIL_USER") at "gmail.com")
+        Envelope.from(storeUser at "gmail.com")
           .to(to)
           .bcc(bcc:_*)
           .subject(subject)
@@ -113,7 +117,7 @@ class Email {
       email,
       "Your recent order",
       renderReceipt(squareOrder),
-      sys.env("RECEIPT_BCC")
+      operatorEmail,
     )
   }
 

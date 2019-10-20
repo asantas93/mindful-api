@@ -25,6 +25,7 @@ class OrderLambda extends ApiGatewayHandler {
   private val email = new Email
   private val dropbox = new Dropbox
   private val excel = new Excel
+  private val maintainerEmail = biz.mindfulmassage.conf.getString("email.maintainer-address")
 
   override def handle(request: HttpRequest, ctx: SamContext): HttpResponse = {
     Try {
@@ -55,9 +56,9 @@ class OrderLambda extends ApiGatewayHandler {
       func
     } catch {
       case e: Exception => email.genericEmail(
-        sys.env("MAINTAINER_EMAIL"),
+        maintainerEmail,
         s"API Error ${Calendar.getInstance().getTime.toString}",
-        s"Encountered error: ${e.toString}\n${e.getMessage}\n${e.getStackTrace.mkString("\n")}"
+        s"Encountered error: ${e.toString}\n${e.getMessage}\n${e.getStackTrace.mkString("\n")}",
       )
     }
   }
