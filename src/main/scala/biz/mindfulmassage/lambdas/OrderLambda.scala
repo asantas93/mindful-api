@@ -37,7 +37,7 @@ class OrderLambda extends ApiGatewayHandler {
   private val email = new Email
   private val dropbox = new Dropbox
   private val excel = new Excel
-  private val maintainerEmail = biz.mindfulmassage.conf.getString("email.maintainer-address")
+  private val maintainerEmail = biz.mindfulmassage.conf.getString("email.maintainer")
   private val logger = LoggerFactory.getLogger(getClass)
 
   override def handle(request: HttpRequest, ctx: SamContext): HttpResponse = {

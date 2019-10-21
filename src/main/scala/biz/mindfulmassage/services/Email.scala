@@ -3,33 +3,49 @@ package biz.mindfulmassage.services
 import java.text.SimpleDateFormat
 import java.util.Calendar
 
-import javax.mail.internet.InternetAddress
-import com.squareup.connect.models.Order
-import biz.mindfulmassage.lambdas.PublicOrder
 import biz.mindfulmassage.implicits._
-import courier.Defaults._
-import courier.{Envelope, Mailer, Multipart, addr}
+import biz.mindfulmassage.lambdas.PublicOrder
+import com.amazonaws.regions.Regions
+import com.amazonaws.services.simpleemail.AmazonSimpleEmailServiceClientBuilder
+import com.amazonaws.services.simpleemail.model._
+import com.squareup.connect.models.Order
+import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
-import scala.language.{implicitConversions, postfixOps}
+import scala.language.postfixOps
 
 class Email {
 
-  private val storeUser = biz.mindfulmassage.conf.getString("email.store-gmail.user")
-  private val storePass = biz.mindfulmassage.conf.getString("email.store-gmail.password")
-  private val operatorEmail = biz.mindfulmassage.conf.getString("email.operator-address")
+  private val logger = LoggerFactory.getLogger(getClass)
+  private val staffEmail = biz.mindfulmassage.conf.getString("email.staff")
+  private val ownerEmail = biz.mindfulmassage.conf.getString("email.owner")
 
-  def genericEmail(to: String, subject: String, body: String, bcc: InternetAddress*): Unit = {
-    Mailer("smtp.gmail.com", 587)
-      .auth(true)
-      .as(storeUser at "gmail.com" getAddress, storePass)
-      .startTtls(true)() {
-        Envelope.from(storeUser at "gmail.com")
-          .to(to)
-          .bcc(bcc:_*)
-          .subject(subject)
-          .content(Multipart().html(body))
-      } onComplete { outcome => if (outcome isFailure) throw new RuntimeException("Failed to send email") }
+  def genericEmail(to: String, subject: String, body: String, bcc: String*): Unit = {
+    try {
+      val client = AmazonSimpleEmailServiceClientBuilder.standard.withRegion(Regions.US_EAST_1).build()
+      val request = new SendEmailRequest()
+        .withDestination(
+          new Destination()
+            .withToAddresses(staffEmail) // FIXME
+            .withBccAddresses(bcc:_*))
+        .withMessage(
+          new Message()
+            .withBody(
+              new Body()
+                .withHtml(
+                  new Content()
+                    .withCharset("UTF-8")
+                    .withData(body)))
+            .withSubject(new Content()
+              .withCharset("UTF-8")
+              .withData(subject + s" [Forward to $to]")))
+        .withSource(staffEmail)
+      client.sendEmail(request)
+    } catch {
+      case e: Exception =>
+        logger.error("Error sending email:", e)
+        throw e
+    }
   }
 
   def renderGift(order: PublicOrder)(implicit squareOrder: Order): String = {
@@ -117,10 +133,7 @@ class Email {
       email,
       "Your recent order",
       renderReceipt(squareOrder),
-      operatorEmail,
+      ownerEmail,
     )
   }
-
-  private implicit def str2IntAddr(email: String): InternetAddress = new InternetAddress(email)
-
 }
