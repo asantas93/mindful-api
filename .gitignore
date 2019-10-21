@@ -1,5 +1,8 @@
-logs
-target
+**/logs/
+**/.idea/
+**/.vscode/
+**/target/
+**/project/project/
 /.idea
 /.idea_modules
 /.classpath
@@ -9,5 +12,4 @@ target
 .square_*
 .service_key.json
 .dropbox_token
-api.mindfulmassage.biz.csr
-KeyStore.jks
+reference.conf

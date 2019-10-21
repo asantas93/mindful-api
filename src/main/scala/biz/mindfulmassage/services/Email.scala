@@ -1,31 +1,51 @@
-package services
+package biz.mindfulmassage.services
 
 import java.text.SimpleDateFormat
 import java.util.Calendar
-import javax.mail.internet.InternetAddress
 
+import biz.mindfulmassage.implicits._
+import biz.mindfulmassage.lambdas.PublicOrder
+import com.amazonaws.regions.Regions
+import com.amazonaws.services.simpleemail.AmazonSimpleEmailServiceClientBuilder
+import com.amazonaws.services.simpleemail.model._
 import com.squareup.connect.models.Order
-import controllers.PublicOrder
-import courier.Defaults._
-import courier.{Envelope, Mailer, Multipart, addr}
-import implicits.MoneyLike
+import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
-import scala.language.{implicitConversions, postfixOps}
+import scala.language.postfixOps
 
 class Email {
 
-  def genericEmail(to: String, subject: String, body: String, bcc: InternetAddress*): Unit = {
-    Mailer("smtp.gmail.com", 587)
-      .auth(true)
-      .as(sys.env("STORE_GMAIL_USER") at "gmail.com" getAddress, sys.env("STORE_GMAIL_PW"))
-      .startTtls(true)() {
-        Envelope.from(sys.env("STORE_GMAIL_USER") at "gmail.com")
-          .to(to)
-          .bcc(bcc:_*)
-          .subject(subject)
-          .content(Multipart().html(body))
-      } onComplete { outcome => if (outcome isFailure) throw new RuntimeException("Failed to send email") }
+  private val logger = LoggerFactory.getLogger(getClass)
+  private val staffEmail = biz.mindfulmassage.conf.getString("email.staff")
+  private val ownerEmail = biz.mindfulmassage.conf.getString("email.owner")
+
+  def genericEmail(to: String, subject: String, body: String, bcc: String*): Unit = {
+    try {
+      val client = AmazonSimpleEmailServiceClientBuilder.standard.withRegion(Regions.US_EAST_1).build()
+      val request = new SendEmailRequest()
+        .withDestination(
+          new Destination()
+            .withToAddresses(to)
+            .withBccAddresses(bcc:_*))
+        .withMessage(
+          new Message()
+            .withBody(
+              new Body()
+                .withHtml(
+                  new Content()
+                    .withCharset("UTF-8")
+                    .withData(body)))
+            .withSubject(new Content()
+              .withCharset("UTF-8")
+              .withData(subject)))
+        .withSource(staffEmail)
+      client.sendEmail(request)
+    } catch {
+      case e: Exception =>
+        logger.error("Error sending email:", e)
+        throw e
+    }
   }
 
   def renderGift(order: PublicOrder)(implicit squareOrder: Order): String = {
@@ -113,10 +133,7 @@ class Email {
       email,
       "Your recent order",
       renderReceipt(squareOrder),
-      sys.env("RECEIPT_BCC")
+      ownerEmail,
     )
   }
-
-  private implicit def str2IntAddr(email: String): InternetAddress = new InternetAddress(email)
-
 }

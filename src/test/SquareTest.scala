@@ -1,7 +1,7 @@
 import java.io.{File, PrintWriter}
 
 import com.squareup.connect.models.Order
-import controllers.{PublicOrder, PublicOrderRequest}
+import biz.mindfulmassage.controllers.{PublicOrder, PublicOrderRequest}
 import org.scalatest.{FlatSpec, Matchers}
 import services._
 

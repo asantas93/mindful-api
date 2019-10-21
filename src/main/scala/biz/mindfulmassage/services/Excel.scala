@@ -1,10 +1,10 @@
-package services
+package biz.mindfulmassage.services
 
 import java.io._
 import java.util.Date
 
 import org.apache.poi.ss.usermodel.{HorizontalAlignment, WorkbookFactory}
-import implicits.{RowLike, SheetLike}
+import biz.mindfulmassage.implicits.{RowLike, SheetLike}
 
 class Excel {
 

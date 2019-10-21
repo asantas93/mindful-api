@@ -1,4 +1,0 @@
-#!/bin/bash -e
-
-sbt dist
-docker build -t $1 -f Dockerfile.local .
