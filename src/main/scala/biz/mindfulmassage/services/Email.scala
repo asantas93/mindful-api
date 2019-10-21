@@ -26,7 +26,7 @@ class Email {
       val request = new SendEmailRequest()
         .withDestination(
           new Destination()
-            .withToAddresses(staffEmail) // FIXME
+            .withToAddresses(to)
             .withBccAddresses(bcc:_*))
         .withMessage(
           new Message()
@@ -38,7 +38,7 @@ class Email {
                     .withData(body)))
             .withSubject(new Content()
               .withCharset("UTF-8")
-              .withData(subject + s" [Forward to $to]")))
+              .withData(subject)))
         .withSource(staffEmail)
       client.sendEmail(request)
     } catch {
