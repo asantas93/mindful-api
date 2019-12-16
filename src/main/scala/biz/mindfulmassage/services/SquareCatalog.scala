@@ -4,6 +4,7 @@ import com.squareup.connect.api.CatalogApi
 import com.squareup.connect.models.SearchCatalogObjectsRequest
 
 import scala.collection.JavaConverters._
+import scala.util.Try
 
 class SquareCatalog extends SquareService {
 
@@ -23,10 +24,11 @@ class SquareCatalog extends SquareService {
         PublicItem(
           obj.getId,
           itemData.getName,
-          itemData.getVariations.asScala.toList.map {
-            variation =>
+          itemData.getVariations.asScala.toList.flatMap {
+            variation => Try {
               val variationData = variation.getItemVariationData
               PublicVariation(variation.getId, variationData.getName, variationData.getPriceMoney.getAmount.intValue())
+            }.toOption
           },
           Option(itemData.getDescription),
           itemData.getCategoryId,
