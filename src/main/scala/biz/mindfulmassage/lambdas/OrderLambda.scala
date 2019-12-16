@@ -3,25 +3,26 @@ package biz.mindfulmassage.lambdas
 import java.text.SimpleDateFormat
 import java.util.Calendar
 
+import biz.mindfulmassage.InvalidUserInput
 import biz.mindfulmassage.implicits._
 import biz.mindfulmassage.services._
 import com.github.dnvriend.lambda.annotation.HttpHandler
 import com.github.dnvriend.lambda.{ApiGatewayHandler, HttpRequest, HttpResponse, SamContext}
+import com.github.dnvriend.lambda.HttpResponse._
 import com.squareup.connect.models.{Order, OrderLineItem}
+import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.text.RandomStringGenerator
-import org.json4s.Extraction._
-import org.json4s.{DefaultFormats, Formats}
-import org.slf4j.LoggerFactory
+import org.json4s.jackson.Serialization
+import org.json4s.{DefaultFormats, Formats, MappingException}
 import play.api.libs.json.JsString
 
 import scala.collection.JavaConverters._
-import scala.util.{Failure, Success, Try}
 
 @HttpHandler(path = "/order", method = "options")
 class OrderOptionsLambda extends ApiGatewayHandler {
 
   override def handle(request: HttpRequest, ctx: SamContext): HttpResponse = {
-    HttpResponse.ok
+    ok
       .withHeader("Access-Control-Allow-Origin", "*")
       .withHeader("Access-Control-Allow-Headers", "*")
       .withHeader("Access-Control-Allow-Methods", "OPTIONS,POST")
@@ -29,7 +30,7 @@ class OrderOptionsLambda extends ApiGatewayHandler {
 }
 
 @HttpHandler(path = "/order", method = "post")
-class OrderLambda extends ApiGatewayHandler {
+class OrderLambda extends ApiGatewayHandler with LazyLogging {
 
   implicit val formats: Formats = DefaultFormats
   private val ordersApi = new SquareOrders
@@ -38,30 +39,36 @@ class OrderLambda extends ApiGatewayHandler {
   private val dropbox = new Dropbox
   private val excel = new Excel
   private val maintainerEmail = biz.mindfulmassage.conf.getString("email.maintainer")
-  private val logger = LoggerFactory.getLogger(getClass)
 
   override def handle(request: HttpRequest, ctx: SamContext): HttpResponse = {
-    val resp = Try {
-      extractOpt[PublicOrderRequest](request.body.asJValue).orElse {
-        throw new RuntimeException("Your order could not be understood. Please contact our staff for assistance.")
-      }.foreach {
-        request =>
-          implicit val order: Order = ordersApi.createOrder(request)
-          transactionsApi.completeOrder(order, request)
-          tryEmailError { logGiftCards(request.orders) }
-          tryEmailError { email.receiptEmail(request.email, order) }
-          tryEmailError { request.orders foreach { o => email.giftEmail(o) } }
-      }
-    } match {
-      case Success(_) => HttpResponse.ok
-        .withBody(JsString("Order processed."))
-      case Failure(e) => HttpResponse.serverError.withBody {
-        JsString {
-          "Your order resulted in an error and has been cancelled. Please try clearing your browser's cache and " +
-            "refreshing this page. If the problem persists please contact our staff with this error message:\n" +
-            e.getMessage
+    val resp = try {
+      val orderRequest = request.body.asJValue.extract[PublicOrderRequest]
+      logger.info(s"Received order from ${orderRequest.email} with items ${orderRequest.orders}")
+      (orderRequest.email :: orderRequest.orders.map(_.toEmail)).foreach(Email.validateEmail)
+      implicit val order: Order = ordersApi.createOrder(orderRequest)
+      transactionsApi.completeOrder(order, orderRequest)
+      tryEmailError { logGiftCards(orderRequest.orders) }
+      tryEmailError { email.receiptEmail(orderRequest.email, order) }
+      tryEmailError { orderRequest.orders.foreach { o => email.giftEmail(o) } }
+      ok.withBody(JsString("Order processed."))
+    } catch {
+      case e: Throwable =>
+        logger.error(s"Encountered exception handling request ${Serialization.writePretty(request.body.asJValue)}", e)
+        e match {
+          case _: MappingException => validationError.withBody {
+            JsString("Your order was sent in an invalid format. Please contact our staff for assistance.")
+          }
+          case e: InvalidUserInput => validationError.withBody(JsString(e.getMessage))
+          case e: Throwable =>
+            email.errorEmail(maintainerEmail, e)
+            serverError.withBody {
+            JsString {
+              "Your order resulted in an error and has been cancelled. Please try clearing your browser's cache and " +
+                "refreshing this page. If the problem persists please contact our staff with this error message:\n" +
+                e.getMessage
+            }
+          }
         }
-      }
     }
     resp.withHeader("Access-Control-Allow-Origin", "*")
   }
@@ -72,11 +79,7 @@ class OrderLambda extends ApiGatewayHandler {
     } catch {
       case e: Exception =>
         logger.error("Encountered error in order completion.", e)
-        email.genericEmail(
-          maintainerEmail,
-          s"API Error ${Calendar.getInstance().getTime.toString}",
-          s"Encountered error: ${e.toString}\n${e.getMessage}\n${e.getStackTrace.mkString("\n")}",
-        )
+        email.errorEmail(maintainerEmail, e)
     }
   }
 
@@ -121,7 +124,4 @@ case class PublicOrder(itemId: String, variationId: String, quantity: Int, from:
     order.getLineItems.asScala.find(_.getCatalogObjectId == variationId).get
 }
 
-case class PublicOrderRequest(nonce: String, orders: List[PublicOrder], email: String) {
-  require(email.split("@")(1).contains("."),
-    s"Bad email address given, make sure to include .com or other top level domain: $email")
-}
+case class PublicOrderRequest(nonce: String, orders: List[PublicOrder], email: String)

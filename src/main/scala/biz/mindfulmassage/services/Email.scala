@@ -3,24 +3,25 @@ package biz.mindfulmassage.services
 import java.text.SimpleDateFormat
 import java.util.Calendar
 
+import biz.mindfulmassage.InvalidUserInput
 import biz.mindfulmassage.implicits._
 import biz.mindfulmassage.lambdas.PublicOrder
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.simpleemail.AmazonSimpleEmailServiceClientBuilder
 import com.amazonaws.services.simpleemail.model._
 import com.squareup.connect.models.Order
-import org.slf4j.LoggerFactory
+import com.typesafe.scalalogging.LazyLogging
 
 import scala.collection.JavaConverters._
 import scala.language.postfixOps
 
-class Email {
+class Email extends LazyLogging {
 
-  private val logger = LoggerFactory.getLogger(getClass)
   private val staffEmail = biz.mindfulmassage.conf.getString("email.staff")
   private val ownerEmail = biz.mindfulmassage.conf.getString("email.owner")
 
   def genericEmail(to: String, subject: String, body: String, bcc: String*): Unit = {
+    logger.info(s"Attempting to send email with subject '$subject' to '$to'; bcc: '${bcc.mkString(",")}'")
     try {
       val client = AmazonSimpleEmailServiceClientBuilder.standard.withRegion(Regions.US_EAST_1).build()
       val request = new SendEmailRequest()
@@ -137,5 +138,23 @@ class Email {
       ownerEmail,
       staffEmail,
     )
+  }
+
+  def errorEmail(maintainerEmail: String, e: Throwable): Unit = {
+    genericEmail(
+      maintainerEmail,
+      s"API Error ${Calendar.getInstance.getTime.toString}",
+      s"Encountered error: ${e.toString}\n${e.getMessage}\n${e.getStackTrace.mkString("\n")}",
+    )
+  }
+}
+
+object Email {
+  def validateEmail(email: String): Unit = email.split("@") match {
+    case Array(_, domain) =>
+      if (!domain.contains(".")) {
+        throw InvalidUserInput(s"Email '$email' did not include a valid top level domain, e.g. '.com'")
+      }
+    case _ => throw InvalidUserInput(s"Invalid email '$email' given.")
   }
 }
