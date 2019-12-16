@@ -102,7 +102,8 @@ class Email {
     genericEmail(
       order.toEmail,
       "You've received a gift certificate",
-      renderGift(order)
+      renderGift(order),
+      staffEmail,
     )
   }
 
@@ -134,6 +135,7 @@ class Email {
       "Your recent order",
       renderReceipt(squareOrder),
       ownerEmail,
+      staffEmail,
     )
   }
 }
