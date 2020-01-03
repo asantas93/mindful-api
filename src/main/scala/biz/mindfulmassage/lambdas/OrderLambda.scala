@@ -85,8 +85,7 @@ class OrderLambda extends ApiGatewayHandler with LazyLogging {
 
   def logGiftCards(orders: List[PublicOrder])(implicit squareOrder: Order): Unit = {
     def wrapModifiers(m: String) = if (m.nonEmpty) s"with ($m)" else ""
-    val year = new SimpleDateFormat("yyyy").format(Calendar.getInstance().getTime)
-    val logPath = s"/MM/Financial Records/FY$year/Gift Certificate Log - Online $year.xlsx"
+    val logPath = "/MM/Financial Records/Gift Card Logs/Gift Certificate Log - Online.xlsx"
     orders.foreach {
       order =>
         val orderLineItem = order.asSquare
