@@ -94,7 +94,9 @@ class Email extends LazyLogging {
          |    <br>
          |    Valdosta, GA 31602
          |    <br>
-         |    Visit our <a href="https://mindfulmassage.biz">website</a> or call (229) 259-9535 to book your appointment
+         |    Visit our <a href="https://mindfulmassage.biz">website</a> or call (229) 259-9535 to book your appointment.
+         |    Your gift certificate displays an expiration date, but we will honor the gift card beyond that date as long
+         |    as you have it or its receipt available when you arrive for your appointment.
          |  </body>
          |</html>""".stripMargin
   }
