@@ -13,3 +13,4 @@
 .service_key.json
 .dropbox_token
 reference.conf
+/src/main/resources/application.conf

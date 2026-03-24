@@ -3,7 +3,7 @@ import com.squareup.connect.{ApiClient, Configuration}
 
 trait SquareSandboxService extends SquareService {
 
-  private val devMode = sys.env.get("SQUARE_DEV_MODE").isDefined
+  private val devMode = sys.env.contains("SQUARE_DEV_MODE")
 
   override val client: ApiClient = if (devMode) {
     val c = Configuration.getDefaultApiClient

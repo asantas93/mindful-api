@@ -2,7 +2,6 @@ package biz.mindfulmassage.services
 
 import java.text.SimpleDateFormat
 import java.util.Calendar
-
 import biz.mindfulmassage.InvalidUserInput
 import biz.mindfulmassage.implicits._
 import biz.mindfulmassage.lambdas.PublicOrder
@@ -10,15 +9,16 @@ import com.amazonaws.regions.Regions
 import com.amazonaws.services.simpleemail.AmazonSimpleEmailServiceClientBuilder
 import com.amazonaws.services.simpleemail.model._
 import com.squareup.connect.models.Order
-import com.typesafe.scalalogging.LazyLogging
+import org.apache.commons.logging.LogFactory
 
 import scala.collection.JavaConverters._
 import scala.language.postfixOps
 
-class Email extends LazyLogging {
+class Email {
 
   private val staffEmail = biz.mindfulmassage.conf.getString("email.staff")
   private val ownerEmail = biz.mindfulmassage.conf.getString("email.owner")
+  private val logger = LogFactory.getLog(this.getClass.getName)
 
   def genericEmail(to: String, subject: String, body: String, bcc: String*): Unit = {
     logger.info(s"Attempting to send email with subject '$subject' to '$to'; bcc: '${bcc.mkString(",")}'")

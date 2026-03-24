@@ -1,7 +1,7 @@
 package biz.mindfulmassage.services
 
 import com.squareup.connect.api.CatalogApi
-import com.squareup.connect.models.SearchCatalogObjectsRequest
+import com.squareup.connect.models.{CatalogItem, SearchCatalogObjectsRequest}
 
 import scala.collection.JavaConverters._
 import scala.util.Try
@@ -15,7 +15,7 @@ class SquareCatalog extends SquareService {
     val modifierLists = getModifierLists
     api.searchCatalogObjects(
       new SearchCatalogObjectsRequest()
-        .addObjectTypesItem(SearchCatalogObjectsRequest.ObjectTypesEnum.ITEM)
+        .addObjectTypesItem("ITEM")
     ).getObjects.asScala.toList.filter {
       obj => sellableCategories.map(_.swap).contains(obj.getItemData.getCategoryId)
     }.map {
@@ -41,14 +41,14 @@ class SquareCatalog extends SquareService {
 
   def getCategories: Map[String, String] = api.searchCatalogObjects(
     new SearchCatalogObjectsRequest()
-      .addObjectTypesItem(SearchCatalogObjectsRequest.ObjectTypesEnum.CATEGORY)
+      .addObjectTypesItem("CATEGORY")
   ).getObjects.asScala.toList.map {
     obj => obj.getCategoryData.getName -> obj.getId
   }.toMap
 
   def getModifierLists: Map[String, PublicModifierList] = api.searchCatalogObjects(
     new SearchCatalogObjectsRequest()
-      .addObjectTypesItem(SearchCatalogObjectsRequest.ObjectTypesEnum.MODIFIER_LIST)
+      .addObjectTypesItem("MODIFIER_LIST")
   ).getObjects.asScala.toList.map {
     obj =>
       val modifierListData = obj.getModifierListData

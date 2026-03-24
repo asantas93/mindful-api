@@ -38,7 +38,7 @@ class SquareOrders extends SquareService {
             .basePriceMoney(
               new Money()
                 .amount((tip * 100).longValue())
-                .currency(Money.CurrencyEnum.USD)
+                .currency("USD")
             )
             .quantity(quantity.toString)
         } asJava)

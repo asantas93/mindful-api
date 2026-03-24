@@ -1,21 +1,18 @@
 package biz.mindfulmassage.lambdas
 
-import com.github.dnvriend.lambda.annotation.HttpHandler
-import com.github.dnvriend.lambda.{ApiGatewayHandler, HttpRequest, HttpResponse, SamContext}
-import org.json4s.Extraction._
-import biz.mindfulmassage.implicits._
-import biz.mindfulmassage.services.SquareCatalog
-import org.json4s.{DefaultFormats, Formats}
+import biz.mindfulmassage.model.HttpResponse
+import biz.mindfulmassage.services.{PublicItem, SquareCatalog}
+import com.amazonaws.services.lambda.runtime.{Context, RequestHandler}
 
-@HttpHandler(path = "/inventory", method = "get")
- class InventoryLambda extends ApiGatewayHandler {
+ class InventoryLambda extends RequestHandler[Void, HttpResponse[List[PublicItem]]] {
 
-  implicit val formats: Formats = DefaultFormats
   private val catalog = new SquareCatalog
 
-  override def handle(request: HttpRequest, ctx: SamContext): HttpResponse = {
-    HttpResponse.ok
-      .withHeader("Access-Control-Allow-Origin", "*")
-      .withBody(decompose(catalog.getInventory).asJsValue)
+  override def handleRequest(request: Void, ctx: Context): HttpResponse[List[PublicItem]] = {
+    HttpResponse(
+      200,
+      catalog.getInventory,
+      Map("Access-Control-Allow-Origin" -> "*")
+    )
   }
 }
