@@ -8,7 +8,7 @@ import biz.mindfulmassage.lambdas.PublicOrder
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.simpleemail.AmazonSimpleEmailServiceClientBuilder
 import com.amazonaws.services.simpleemail.model._
-import com.squareup.connect.models.Order
+import com.squareup.square.types.Order
 import org.apache.commons.logging.LogFactory
 
 import scala.collection.JavaConverters._
@@ -56,7 +56,7 @@ class Email {
     val quantity = order.quantity
     val variation = order.asSquare.getVariationName
     val item = orderItem.getName
-    val modifiers = orderItem.getModifiers.asScala.map(_.getName).mkString(", ")
+    val modifiers = orderItem.getModifiers.get.asScala.map(_.getName).mkString(", ")
     val to = order.toName
     val expiration = {
       val calendar = Calendar.getInstance()
@@ -111,12 +111,12 @@ class Email {
   }
 
   def renderReceipt(squareOrder: Order): String = {
-    val items = squareOrder.getLineItems.asScala.map {
+    val items = squareOrder.getLineItems.get.asScala.map {
       order => s"${order.getQuantity}x ${Option(order.getVariationName).getOrElse("")} ${order.getName} @ ${
-        order.getBasePriceMoney.pretty
-      }<br>${order.getModifiers.asScala.map(m => s"- add ${m.getName} @ ${m.getBasePriceMoney.pretty}").mkString("<br>")}"
+        order.getBasePriceMoney.get.pretty
+      }<br>${order.getModifiers.get.asScala.map(m => s"- add ${m.getName} @ ${m.getBasePriceMoney.get.pretty}").mkString("<br>")}"
     }.mkString("<br>")
-    val total = squareOrder.getTotalMoney.pretty
+    val total = squareOrder.getTotalMoney.get.pretty
      s"""<!DOCTYPE html>
     |<html lang="en">
     |  <body>

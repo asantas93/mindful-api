@@ -1,23 +1,23 @@
 package biz.mindfulmassage.services
 
 import java.util.UUID.randomUUID
-
-import com.squareup.connect.api.TransactionsApi
-import com.squareup.connect.models.{ChargeRequest, Order}
 import biz.mindfulmassage.lambdas.PublicOrderRequest
+import com.squareup.square.types.{CreatePaymentRequest, Order}
 
 class SquareTransactions extends SquareSandboxService {
 
-  private val api = new TransactionsApi(client)
-
-  def completeOrder(order: Order, orderRequest: PublicOrderRequest): Unit = api.charge(
-    order.getLocationId,
-    new ChargeRequest()
-      .orderId(order.getId)
-      .buyerEmailAddress(orderRequest.email)
-      .cardNonce(orderRequest.nonce)
-      .idempotencyKey(randomUUID().toString)
-      .amountMoney(order.getTotalMoney)
-  )
+  def completeOrder(order: Order, orderRequest: PublicOrderRequest): Unit = {
+    val idemKey = randomUUID().toString
+    client.payments().create(
+      CreatePaymentRequest.builder()
+        .sourceId(orderRequest.nonce)
+        .idempotencyKey(idemKey)
+        .locationId(locationId)
+        .orderId(order.getId.get())
+        .buyerEmailAddress(orderRequest.email)
+        .amountMoney(order.getTotalMoney)
+        .build()
+    )
+  }
 
 }

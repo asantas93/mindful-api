@@ -1,14 +1,12 @@
 package biz.mindfulmassage.services
-import com.squareup.connect.{ApiClient, Configuration}
+import com.squareup.square.{SquareClient, SquareClientBuilder}
 
 trait SquareSandboxService extends SquareService {
 
   private val devMode = sys.env.contains("SQUARE_DEV_MODE")
 
-  override val client: ApiClient = if (devMode) {
-    val c = Configuration.getDefaultApiClient
-    c.setAccessToken(sys.env("SQUARE_DEV_ACCESS_TOKEN"))
-    c
+  override val client: SquareClient = if (devMode) {
+    new SquareClientBuilder().token(sys.env("SQUARE_DEV_ACCESS_TOKEN")).build()
   } else super.client
 
   override val locationId: String = if (devMode) {

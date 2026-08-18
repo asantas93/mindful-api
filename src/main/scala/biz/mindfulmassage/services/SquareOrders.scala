@@ -1,48 +1,59 @@
 package biz.mindfulmassage.services
 
 import java.util.UUID.randomUUID
-
 import biz.mindfulmassage.InvalidUserInput
-import com.squareup.connect.api.OrdersApi
-import com.squareup.connect.models._
 import biz.mindfulmassage.lambdas.PublicOrderRequest
+import com.squareup.square.types.{CreateOrderRequest, Currency, Money, Order, OrderLineItem, OrderLineItemModifier}
 
 import scala.collection.JavaConverters._
 import scala.language.postfixOps
 
 class SquareOrders extends SquareService {
 
-  private val api = new OrdersApi(client)
-
   def createOrder(orderRequest: PublicOrderRequest): Order = {
     orderRequest.orders.flatMap(_.tip).find(_ < 0).foreach { badTip =>
       throw InvalidUserInput(s"You cannot leave a negative tip: '$badTip'")
     }
-    api.createOrder(
-      locationId,
-      new CreateOrderRequest()
+    val resp = client.orders().create(
+      CreateOrderRequest.builder()
         .idempotencyKey(randomUUID.toString)
-        .lineItems(orderRequest.orders.map {
-          order => new CreateOrderRequestLineItem()
-            .catalogObjectId(order.variationId)
-            .modifiers {
-              order.modifiers.map {
-                modifierId => new CreateOrderRequestModifier()
-                  .catalogObjectId(modifierId)
-              }.asJava
-            }
-            .quantity(order.quantity.toString)
-        } ::: orderRequest.orders.flatMap(o => o.tip.filter(_ > 0).map(o.quantity -> _)).map {
-          case (quantity, tip) => new CreateOrderRequestLineItem()
-            .name("Tip")
-            .basePriceMoney(
-              new Money()
-                .amount((tip * 100).longValue())
-                .currency("USD")
-            )
-            .quantity(quantity.toString)
-        } asJava)
-    ).getOrder
+        .order(
+          Order.builder()
+            .locationId(locationId)
+            .lineItems((orderRequest.orders.map {
+              order => OrderLineItem.builder()
+                .quantity(order.quantity.toString)
+                .catalogObjectId(order.variationId)
+                .modifiers {
+                  order.modifiers.map {
+                    modifierId => OrderLineItemModifier.builder()
+                      .catalogObjectId(modifierId)
+                      .build()
+                  }.asJava
+                }
+                .build()
+            } ::: orderRequest.orders.flatMap(o => o.tip.filter(_ > 0).map(o.quantity -> _)).map {
+              case (quantity, tip) => OrderLineItem.builder()
+                .quantity(quantity.toString)
+                .name("Tip")
+                .basePriceMoney(
+                  Money.builder()
+                    .amount((tip * 100).longValue())
+                    .currency(Currency.USD)
+                    .build()
+                )
+                .build()
+            }).asJava)
+            .build()
+        ).build()
+    )
+    if (resp.getErrors.isPresent && !resp.getErrors.get.isEmpty) {
+      throw new RuntimeException("Square returned API errors during order creation: " + resp.getErrors.get.asScala.map(_.toString).mkString(", "))
+    } else if (resp.getOrder.isPresent) {
+      resp.getOrder.get
+    } else {
+      throw new RuntimeException("No order returned by Square")
+    }
   }
 }
 

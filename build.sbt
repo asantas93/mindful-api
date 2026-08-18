@@ -6,7 +6,7 @@ lazy val `mindful-api` = (project in file("."))
       "org.scalatest" %% "scalatest" % "3.2.19" % Test,
       "org.apache.commons" % "commons-text" % "1.15.0",
       "com.dropbox.core" % "dropbox-core-sdk" % "7.0.0",
-      "com.squareup" % "connect" % "2.20191120.0",
+      "com.squareup" % "square" % "47.0.1.20260715",
       "org.apache.poi" % "poi-ooxml" % "5.5.1",
       "org.apache.poi" % "poi" % "5.5.1",
       "com.typesafe" % "config" % "1.4.3",

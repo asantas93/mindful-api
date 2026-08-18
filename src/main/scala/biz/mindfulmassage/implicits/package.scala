@@ -1,9 +1,9 @@
 package biz.mindfulmassage
 
+import com.squareup.square.types.Money
+
 import java.text.NumberFormat
 import java.util.Locale
-
-import com.squareup.connect.models.Money
 import org.apache.poi.ss.usermodel.{Cell, CellStyle, Row, Sheet}
 
 package object implicits {
@@ -22,7 +22,7 @@ package object implicits {
 
   implicit class MoneyLike(val money: Money) extends AnyVal {
     def pretty: String = NumberFormat.getCurrencyInstance(Locale.US).format(decimal)
-    def decimal: Double = money.getAmount / 100.0
+    def decimal: Double = money.getAmount.get / 100.0
   }
 
 }

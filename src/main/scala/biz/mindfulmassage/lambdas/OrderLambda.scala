@@ -6,7 +6,7 @@ import biz.mindfulmassage.implicits._
 import biz.mindfulmassage.model.HttpResponse
 import biz.mindfulmassage.services._
 import com.amazonaws.services.lambda.runtime.{Context, RequestStreamHandler}
-import com.squareup.connect.models.{Order, OrderLineItem}
+import com.squareup.square.types.{Order, OrderLineItem}
 import org.apache.commons.logging.LogFactory
 import org.apache.commons.text.RandomStringGenerator
 import org.json4s.{DefaultFormats, Formats}
@@ -89,11 +89,11 @@ class OrderLambda extends RequestStreamHandler {
               order.from,
               "No Preference",
               s"${orderLineItem.getName} ${
-                wrapModifiers(orderLineItem.getModifiers.asScala.map(_.getName).mkString(", "))
+                wrapModifiers(orderLineItem.getModifiers.get.asScala.map(_.getName).mkString(", "))
               }",
-              orderLineItem.getVariationName,
-              orderLineItem.getBasePriceMoney.decimal +
-                orderLineItem.getModifiers.asScala.map(_.getBasePriceMoney.decimal).sum,
+              orderLineItem.getVariationName.get,
+              orderLineItem.getBasePriceMoney.get().decimal +
+                orderLineItem.getModifiers.get.asScala.map(_.getBasePriceMoney.get.decimal).sum,
               order.tip.getOrElse(0),
               "CC",
               code,
@@ -111,7 +111,7 @@ case class PublicOrder(itemId: String, variationId: String, quantity: Int, from:
     _ => new RandomStringGenerator.Builder().withinRange('A', 'Z').get().generate(8)
   }
   def asSquare(implicit order: Order): OrderLineItem =
-    order.getLineItems.asScala.find(_.getCatalogObjectId == variationId).get
+    order.getLineItems.get.asScala.find(_.getCatalogObjectId.get == variationId).get
 }
 
 case class PublicOrderRequest(nonce: String, orders: List[PublicOrder], email: String)
